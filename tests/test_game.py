@@ -61,4 +61,4 @@ def test_choose_action_best(monkeypatch):
     monkeypatch.setattr('src.game.get_allowed_actions', lambda p: ['L', 'R'])
     monkeypatch.setattr('src.game.get_best_action', lambda x, y, z: 'R')
     monkeypatch.setattr('random.random', lambda: 1)
-    assert choose_action(current_position, q) == 'R'
+    assert choose_action(current_position, q, 0.1) == 'R'
