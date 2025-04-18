@@ -1,26 +1,31 @@
+import copy
 import random
 import curses
+import time
 
 bloc = '#'
 star = 'O'
 play = '@'
-spac = ' '
+spac = 's'
 goal = 'X'
+tres = 'T'
 walx = '|'
 waly = '='
+noth = ' '
 
 walls = [bloc, walx, waly]
+finish = [*walls, goal, tres, star]
 
 grid = [
-    [waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly],
-    [walx, star, bloc, spac, bloc, bloc, bloc, bloc, bloc, spac, spac, spac, bloc, walx],
-    [walx, spac, bloc, spac, spac, spac, spac, spac, spac, spac, bloc, spac, spac, walx],
-    [walx, spac, bloc, spac, bloc, bloc, bloc, bloc, bloc, bloc, bloc, bloc, spac, walx],
-    [walx, spac, bloc, spac, bloc, bloc, bloc, bloc, bloc, bloc, bloc, bloc, spac, walx],
-    [walx, spac, bloc, spac, spac, spac, spac, spac, spac, spac, spac, bloc, spac, walx],
-    [walx, spac, bloc, bloc, bloc, bloc, bloc, bloc, bloc, bloc, spac, bloc, spac, walx],
-    [walx, spac, spac, spac, spac, spac, spac, spac, spac, spac, spac, bloc, goal, walx],
-    [waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly],
+    [waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, noth, noth, noth, noth, noth, noth, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly],
+    [walx, spac, bloc, spac, spac, spac, spac, spac, spac, spac, walx, noth, waly, waly, waly, noth, noth, walx, spac, spac, bloc, spac, spac, spac, spac, spac, bloc, spac, walx],
+    [walx, spac, star, bloc, bloc, spac, spac, bloc, spac, spac, walx, waly, waly, spac, waly, waly, waly, walx, spac, bloc, bloc, spac, bloc, spac, spac, bloc, goal, bloc, walx],
+    [walx, spac, bloc, spac, spac, spac, spac, bloc, spac, spac, spac, spac, spac, spac, spac, spac, spac, spac, spac, spac, spac, spac, bloc, spac, spac, bloc, spac, spac, walx],
+    [walx, spac, spac, spac, spac, spac, bloc, bloc, spac, bloc, walx, waly, waly, spac, waly, waly, waly, walx, bloc, spac, bloc, bloc, bloc, bloc, spac, bloc, bloc, spac, walx],
+    [walx, bloc, bloc, spac, bloc, spac, bloc, spac, spac, spac, walx, noth, walx, spac, waly, noth, noth, walx, spac, spac, spac, spac, spac, bloc, spac, spac, spac, spac, walx],
+    [walx, spac, spac, spac, bloc, spac, bloc, spac, bloc, spac, walx, noth, walx, spac, waly, waly, noth, walx, spac, spac, bloc, bloc, bloc, bloc, spac, spac, bloc, bloc, walx],
+    [walx, spac, spac, spac, bloc, spac, spac, spac, bloc, spac, walx, noth, walx, spac, spac, waly, noth, walx, bloc, spac, spac, spac, spac, bloc, spac, spac, spac, spac, walx],
+    [waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, noth, waly, waly, waly, waly, noth, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly],
 ]
 
 Q = {}
@@ -33,11 +38,18 @@ right = '→'
 top = '↑'
 down = '↓'
 
+start_values = [0.00111, 0.00222, 0.00333, 0.00444]
+
 ALL_ACTIONS = [left, right, top, down]
 
 for x in range(GRID_SIZE_X):
     for y in range(GRID_SIZE_Y):
-        Q[(x, y)] = {action: 0 for action in ALL_ACTIONS}
+        start_values_copy = start_values.copy()
+        random.shuffle(start_values_copy)
+        print(start_values_copy)
+        Q[(x, y)] = {action: start_values_copy.pop() for action in ALL_ACTIONS}
+        print(Q[(x, y)])
+        #time.sleep(10)
 
 def move (current_position, desired_action):
     x, y = current_position
@@ -57,6 +69,8 @@ def get_reward(current_position):
         return -100
     elif grid[y][x] == goal:
         return 100
+    elif grid[y][x] == tres:
+        return 1
     elif grid[y][x] in walls:
         return -10
     else:
@@ -95,53 +109,91 @@ def print_policy(stdscr):
             row += " " + letter + " "
         stdscr.addstr(y, 0, row)
 
-def draw_grid(stdscr, current_pos, episode, step, action, reward, old_q, new_q):
+def draw_grid(stdscr, current_player_pos, episode, action, reward, old_q, new_q):
     stdscr.clear()
-    current_x, current_y = current_pos
-    for y in range(GRID_SIZE_Y):
-        row = ''
-        for x in range(GRID_SIZE_X):
-            if x == current_x and y == current_y:
-                letter = play
+    current_player_pos_x, current_player_pos_y = current_player_pos
+    for draw_y in range(GRID_SIZE_Y):
+        for draw_x in range(GRID_SIZE_X):
+            # Position des Cursors setzen
+            draw_pos = (draw_x,draw_y)
+            stdscr.move(draw_y, draw_x * 3)  # Jedes Symbol ist 3 Zeichen breit (z. B. " X ")
+
+            # Symbol bestimmen, was geprintet werden soll
+            if draw_x == current_player_pos_x and draw_y == current_player_pos_y:
+                symbol = play
             else:
-                letter = grid[y][x]
-            row += " " + letter + " "
-        stdscr.addstr(y, 0, row)
+                symbol = grid[draw_y][draw_x]
+
+            if symbol == spac:
+                symbol = get_best_action(Q, ALL_ACTIONS, draw_pos)
+
+            # Farbe basierend auf dem Symbol wählen
+            if symbol == play:
+                color = curses.color_pair(1)
+            elif symbol == goal or symbol == star:
+                color = curses.color_pair(2)
+            elif symbol in ALL_ACTIONS:
+                if Q[draw_pos][symbol] in start_values:
+                    color = curses.color_pair(7)
+                else:
+                    color = curses.color_pair(5)
+            elif symbol == bloc:
+                color = curses.color_pair(3)
+            elif symbol == waly or symbol == walx:
+                color = curses.color_pair(4)
+            else:
+                color = curses.color_pair(4)
+            stdscr.addstr(f" {symbol} ", color)
+
     stdscr.addstr(GRID_SIZE_Y, 0,
-                  f"# {episode+1:05}  Step: {step:03}  Action: {action}  Reward: {reward:.1f}  OldQ: {old_q:.2f}  NewQ: {new_q:.2f}")
+                  f"Episode: #{episode:05}  Action: {action}  Reward: {reward:.1f}  OldQ: {old_q:.5f}  NewQ: {new_q:.5f}")
     stdscr.refresh()
 
 def clear_screen(stdscr):
     stdscr.clear()
 
 # Q-Learning Algorithmus
-def q_learning(stdscr, episodes=10000, alpha=0.2, gamma=0.9, epsilon=0.1):
+def q_learning(stdscr, episodes=20000, alpha=0.2, gamma=0.9, epsilon=0.2):
     curses.curs_set(0)
     for e in range(episodes):
-        current_pos = (1, 1)
+        current_player_pos = (2, 2)
         done = False
         step = 0
         while not done:
-            action = choose_action(current_pos, Q, epsilon)
-            new_pos = move(current_pos, action)
-            reward = get_reward(new_pos)
+            action = choose_action(current_player_pos, Q, epsilon)
+            new_player_pos = move(current_player_pos, action)
+            reward = get_reward(new_player_pos)
 
-            old_q = Q[current_pos][action]
-            future_q = max(Q[new_pos].values())
+            old_q = Q[current_player_pos][action]
+            future_q = max(Q[new_player_pos].values())
             new_q = old_q + alpha * (reward + gamma * future_q - old_q)
-            Q[current_pos][action] = new_q
+            Q[current_player_pos][action] = new_q
 
-            draw_grid(stdscr, current_pos, e, step, action, reward, old_q, new_q)
+            draw_grid(stdscr, current_player_pos, e, action, reward, old_q, new_q)
 
-            current_pos = new_pos
+            current_player_pos = new_player_pos
             step += 1
+            #time.sleep(1)
 
-            if grid[new_pos[1]][new_pos[0]] in (star, goal, *walls):
+            if grid[new_player_pos[1]][new_player_pos[0]] in finish:
                 done = True
     print_policy(stdscr)
 
+def init_colors():
+    curses.start_color()
+    COLOR_GREY = curses.COLOR_WHITE + 1
+    curses.init_color(COLOR_GREY, 200, 200, 200)
+    curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)    # Rot auf Schwarz
+    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)  # Grün auf Schwarz
+    curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)  # Weiß auf Schwarz
+    curses.init_pair(4, curses.COLOR_BLUE, curses.COLOR_BLACK)   # Blau auf Schwarz
+    curses.init_pair(5, curses.COLOR_YELLOW, curses.COLOR_BLACK)   # Blau auf Schwarz
+    curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)   # Blau auf Schwarz
+    curses.init_pair(7, COLOR_GREY, curses.COLOR_BLACK)   # Blau auf Schwarz
+
 def main():
     stdscr = curses.initscr()
+    init_colors()
     curses.noecho()
     curses.cbreak()
     stdscr.keypad(True)
