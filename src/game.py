@@ -1,5 +1,5 @@
 import random
-import os
+import curses
 
 bloc = '#'
 star = 'O'
@@ -82,7 +82,8 @@ def choose_action(current_position, q, epsilon):
     else:
         return get_best_action(q, allowed_actions, current_position)
 
-def print_policy():
+def print_policy(stdscr):
+    stdscr.clear()
     for y in range(GRID_SIZE_Y):
         row = ''
         for x in range(GRID_SIZE_X):
@@ -92,9 +93,10 @@ def print_policy():
             else:
                 letter = get_best_action(Q, get_allowed_actions(current_position), current_position)
             row += " " + letter + " "
-        print(row)
+        stdscr.addstr(y, 0, row)
 
-def print_grid_with_current_pos(current_pos):
+def draw_grid(stdscr, current_pos, episode, step, action, reward, old_q, new_q):
+    stdscr.clear()
     current_x, current_y = current_pos
     for y in range(GRID_SIZE_Y):
         row = ''
@@ -104,13 +106,17 @@ def print_grid_with_current_pos(current_pos):
             else:
                 letter = grid[y][x]
             row += " " + letter + " "
-        print(row)
+        stdscr.addstr(y, 0, row)
+    stdscr.addstr(GRID_SIZE_Y, 0,
+                  f"# {episode+1:05}  Step: {step:03}  Action: {action}  Reward: {reward:.1f}  OldQ: {old_q:.2f}  NewQ: {new_q:.2f}")
+    stdscr.refresh()
 
-def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
+def clear_screen(stdscr):
+    stdscr.clear()
 
 # Q-Learning Algorithmus
-def q_learning(episodes=1500, alpha=0.2, gamma=0.9, epsilon=0.1):
+def q_learning(stdscr, episodes=10000, alpha=0.2, gamma=0.9, epsilon=0.1):
+    curses.curs_set(0)
     for e in range(episodes):
         current_pos = (1, 1)
         done = False
@@ -120,27 +126,36 @@ def q_learning(episodes=1500, alpha=0.2, gamma=0.9, epsilon=0.1):
             new_pos = move(current_pos, action)
             reward = get_reward(new_pos)
 
-            # Q-Wert updaten
             old_q = Q[current_pos][action]
             future_q = max(Q[new_pos].values())
             new_q = old_q + alpha * (reward + gamma * future_q - old_q)
             Q[current_pos][action] = new_q
-            clear_screen()
-            print("#" + format(e+1, '05') + " #" + format(step, '03') + " ac: " + str(action)
-                  + ", np: " + str(new_pos) + ", r: " + str(reward) + ", oldq: " + str(old_q) + ", newq: " + str(new_q))
-            print_grid_with_current_pos(current_pos)
+
+            draw_grid(stdscr, current_pos, e, step, action, reward, old_q, new_q)
 
             current_pos = new_pos
-
             step += 1
-            #sleep(0.001)
+
             if grid[new_pos[1]][new_pos[0]] in (star, goal, *walls):
                 done = True
+    print_policy(stdscr)
+
+def main():
+    stdscr = curses.initscr()
+    curses.noecho()
+    curses.cbreak()
+    stdscr.keypad(True)
+
+    try:
+        q_learning(stdscr)
+    finally:
+        stdscr.addstr(GRID_SIZE_Y + 2, 0, "Drücke eine Taste zum Beenden...")
+        stdscr.refresh()
+        stdscr.getch()
+        curses.nocbreak()
+        stdscr.keypad(False)
+        curses.echo()
+        curses.endwin()
 
 if __name__ == "__main__":
-    try:
-        q_learning()
-        clear_screen()
-        print_policy()
-    except KeyboardInterrupt:
-        print_policy()
+    main()
