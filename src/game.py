@@ -28,10 +28,13 @@ grid = [
     [waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, noth, waly, waly, waly, waly, noth, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly, waly],
 ]
 
+
 Q = {}
 
 GRID_SIZE_Y = len(grid)
 GRID_SIZE_X = len(grid[0])
+
+heatmap = [[0 for _ in range(GRID_SIZE_X)] for _ in range(GRID_SIZE_Y)]
 
 left = '←'
 right = '→'
@@ -136,7 +139,7 @@ def draw_grid(stdscr, current_player_pos, episode, action, reward, old_q, new_q)
                 if Q[draw_pos][symbol] in start_values:
                     color = curses.color_pair(7)
                 else:
-                    color = curses.color_pair(5)
+                    color = get_color_heatmap(draw_pos)
             elif symbol == bloc:
                 color = curses.color_pair(3)
             elif symbol == waly or symbol == walx:
@@ -148,6 +151,29 @@ def draw_grid(stdscr, current_player_pos, episode, action, reward, old_q, new_q)
     stdscr.addstr(GRID_SIZE_Y, 0,
                   f"Episode: #{episode:05}  Action: {action}  Reward: {reward:.1f}  OldQ: {old_q:.5f}  NewQ: {new_q:.5f}")
     stdscr.refresh()
+
+def get_heatmap_max():
+    return max(max(row) for row in heatmap)
+
+def get_bg_color_ratio(current_position):
+    x, y = current_position
+    current_value = heatmap[y][x]
+    max_value = get_heatmap_max()
+    return current_value / max_value
+
+def get_color_heatmap(current_position):
+    ratio = get_bg_color_ratio(current_position)
+    if 0 <= ratio <= 0.05:
+        return curses.color_pair(10)
+    elif 0.05 <= ratio <= 0.1:
+        return curses.color_pair(11)
+    elif 0.1 <= ratio <= 0.2:
+        return curses.color_pair(12)
+    elif 0.2 <= ratio <= 0.3:
+        return curses.color_pair(13)
+    else:
+        return curses.color_pair(14)
+
 
 def clear_screen(stdscr):
     stdscr.clear()
@@ -162,6 +188,8 @@ def q_learning(stdscr, episodes=20000, alpha=0.2, gamma=0.9, epsilon=0.2):
         while not done:
             action = choose_action(current_player_pos, Q, epsilon)
             new_player_pos = move(current_player_pos, action)
+            new_x, new_y = new_player_pos
+            heatmap[new_y][new_x] += 0.00001*(e**1.5)
             reward = get_reward(new_player_pos)
 
             old_q = Q[current_player_pos][action]
@@ -190,6 +218,18 @@ def init_colors():
     curses.init_pair(5, curses.COLOR_YELLOW, curses.COLOR_BLACK)   # Blau auf Schwarz
     curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)   # Blau auf Schwarz
     curses.init_pair(7, COLOR_GREY, curses.COLOR_BLACK)   # Blau auf Schwarz
+
+    # Heatmap Colors
+    curses.init_color(10, 0, 0, 0)
+    curses.init_color(11, 0, 200, 0)
+    curses.init_color(12, 0, 400, 0)
+    curses.init_color(13, 0, 600, 0)
+    curses.init_color(14, 0, 800, 0)
+    curses.init_pair(10, COLOR_GREY, 10)   # Blau auf Schwarz
+    curses.init_pair(11, curses.COLOR_BLACK, 11)   # Blau auf Schwarz
+    curses.init_pair(12, curses.COLOR_BLACK, 12)   # Blau auf Schwarz
+    curses.init_pair(13, curses.COLOR_BLACK, 13)   # Blau auf Schwarz
+    curses.init_pair(14, curses.COLOR_BLACK, 14)   # Blau auf Schwarz
 
 def main():
     stdscr = curses.initscr()
