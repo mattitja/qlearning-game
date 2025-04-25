@@ -1,8 +1,8 @@
 from src.game import move, GRID_SIZE, ALL_ACTIONS
-from src.game import get_reward
+from src.game import calculate_reward
 from src.game import get_allowed_actions
 from src.game import get_best_action
-from src.game import choose_action
+from src.game import pick_best_or_random_action
 from src.game import GRID_SIZE
 
 M = 0 #min
@@ -27,9 +27,9 @@ def test_move():
     assert move((G, M), '→') == (G, M)
 
 def test_get_reward():
-    assert get_reward((M,M)) == -1.0
-    assert get_reward((G,G)) == 100
-    assert get_reward((1,1)) == -0.1
+    assert calculate_reward((M, M)) == -1.0
+    assert calculate_reward((G, G)) == 100
+    assert calculate_reward((1, 1)) == -0.1
 
 def test_get_allowed_actions():
     assert get_allowed_actions((M, M)) == ['→', '↓']
@@ -53,7 +53,7 @@ def test_choose_action_random(monkeypatch):
     q = {current_position: {'←': 1, '→': 2, '↑': 3, '↓': 4}}
     monkeypatch.setattr('src.game.get_allowed_actions', lambda p: ['←'])
     monkeypatch.setattr('random.random', lambda: 0.00)
-    assert choose_action(current_position, q) == '←'
+    assert pick_best_or_random_action(current_position, q) == '←'
 
 def test_choose_action_best(monkeypatch):
     current_position = (0, 0)
@@ -61,4 +61,4 @@ def test_choose_action_best(monkeypatch):
     monkeypatch.setattr('src.game.get_allowed_actions', lambda p: ['←', '→'])
     monkeypatch.setattr('src.game.get_best_action', lambda x, y, z: '→')
     monkeypatch.setattr('random.random', lambda: 1)
-    assert choose_action(current_position, q, 0.1) == '→'
+    assert pick_best_or_random_action(current_position, q, 0.1) == '→'
