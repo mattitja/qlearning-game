@@ -1,14 +1,14 @@
 # color pairs
 import curses
-from game import bloc
-from game import star
-from game import play
-from game import spac
-from game import goal
-from game import tres
-from game import walx
-from game import waly
-from game import start_values
+from game import BLOCK
+from game import START
+from game import PLAYR
+from game import SPACE
+from game import GOALL
+from game import TRESR
+from game import WALLX
+from game import WALLY
+from game import START_VALUES
 from game import ALL_ACTIONS
 from game import get_symbol
 from game import get_best_action
@@ -31,135 +31,133 @@ BLUE_ON_BLACK = 8
 LIGHT_GREY_ON_BLACK = 15
 BLACK_ON_BLACK = 16
 
-heatmap = {}
-
-def init_heatmap(GRID_SIZE_X, GRID_SIZE_Y):
-    global heatmap
-    heatmap = [[0 for _ in range(GRID_SIZE_X)] for _ in range(GRID_SIZE_Y)]
+def init_heatmap(grid_size_x, grid_size_y):
+    heatmap = [[0 for _ in range(grid_size_x)] for _ in range(grid_size_y)]
+    return heatmap
 
 
-def draw_grid(stdscr, current_player_pos, episode, action, reward, old_q, new_q, step, player_dead, speed, GRID_SIZE_X, GRID_SIZE_Y, grid, Q):
-    stdscr.clear()
+def draw_grid(screen, current_player_pos, episode, action, reward, old_q, new_q, step, player_dead, speed, grid_size_x, grid_size_y, grid, q, heatmap):
+    screen.clear()
     current_player_pos_x, current_player_pos_y = current_player_pos
-    for draw_y in range(GRID_SIZE_Y):
-        for draw_x in range(GRID_SIZE_X):
+    for draw_y in range(grid_size_y):
+        for draw_x in range(grid_size_x):
             # Position des Cursors setzen
-            draw_one_grid_slot(current_player_pos_x, current_player_pos_y, draw_x, draw_y, player_dead, stdscr, grid, Q)
+            draw_one_grid_slot(current_player_pos_x, current_player_pos_y, draw_x, draw_y, player_dead, screen, grid, q, heatmap)
 
-    draw_statistics(action, episode, new_q, old_q, player_dead, reward, speed, stdscr, step, GRID_SIZE_X, GRID_SIZE_Y)
-    stdscr.refresh()
+    draw_statistics(action, episode, new_q, old_q, player_dead, reward, speed, screen, step, grid_size_y)
+    screen.refresh()
 
 
-def draw_one_grid_slot(current_player_pos_x, current_player_pos_y, draw_x, draw_y, player_dead, stdscr, grid, Q):
+def draw_one_grid_slot(current_player_pos_x, current_player_pos_y, draw_x, draw_y, player_dead, screen, grid, q, heatmap):
     draw_pos = (draw_x, draw_y)
-    stdscr.move(draw_y, draw_x * 3)  # Jedes Symbol ist 3 Zeichen breit (z. B. " X ")
+    screen.move(draw_y, draw_x * 3)  # Jedes Symbol ist 3 Zeichen breit (z. B. " X ")
 
-    symbol = determine_symbol(current_player_pos_x, current_player_pos_y, draw_pos, grid, Q)
-    color = determine_symbol_color(draw_pos, player_dead, symbol, Q)
-    stdscr.addstr(f" {symbol} ", color)
+    symbol = determine_symbol(current_player_pos_x, current_player_pos_y, draw_pos, grid, q)
+    color = determine_symbol_color(draw_pos, player_dead, symbol, q, heatmap)
+    screen.addstr(f" {symbol} ", color)
 
 
-def determine_symbol_color(draw_pos, player_dead, symbol, Q):
-    if symbol == play:
+def determine_symbol_color(draw_pos, player_dead, symbol, q, heatmap):
+    if symbol == PLAYR:
         if player_dead:
             color = curses.color_pair(RED_ON_BLACK)
         else:
             color = curses.color_pair(WHITE_ON_BLACK)
-    elif symbol == goal or symbol == star:
+    elif symbol == GOALL or symbol == START:
         color = curses.color_pair(YELLOW_ON_BLACK)
     elif symbol in ALL_ACTIONS:
-        if Q[draw_pos][symbol] in start_values:
+        if q[draw_pos][symbol] in START_VALUES:
             color = curses.color_pair(GREY_ON_BLACK)
         else:
-            color = get_color_heatmap(draw_pos)
-    elif symbol == bloc or symbol == waly or symbol == walx:
+            color = get_color_heatmap(draw_pos, heatmap)
+    elif symbol == BLOCK or symbol == WALLY or symbol == WALLX:
         color = curses.color_pair(WHITE_ON_BLACK)
     else:
         color = curses.color_pair(LIGHT_GREY_ON_BLACK)
     return color
 
 
-def determine_symbol(current_player_pos_x, current_player_pos_y, draw_pos, grid, Q):
+def determine_symbol(current_player_pos_x, current_player_pos_y, draw_pos, grid, q):
     if draw_pos[0] == current_player_pos_x and draw_pos[1] == current_player_pos_y:
-        symbol = play
+        symbol = PLAYR
     else:
         symbol = get_symbol(draw_pos, grid)
-    if symbol == spac:
-        symbol = get_best_action(Q, ALL_ACTIONS, draw_pos)
+    if symbol == SPACE:
+        symbol = get_best_action(q, ALL_ACTIONS, draw_pos)
     return symbol
 
 
-def draw_statistics(action, episode, new_q, old_q, player_dead, reward, speed, stdscr, step, GRID_SIZE_X, GRID_SIZE_Y):
-    lineNumber = GRID_SIZE_Y
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "")
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Speed: ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"{speed:.0f}x", curses.color_pair(WHITE_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "")
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Current Step: ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"#{step:03} ", curses.color_pair(GREY_ON_BLACK) if player_dead else curses.color_pair(GREY_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Current Episode: ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"#{episode:05} ",
-                  curses.color_pair(GREY_ON_BLACK) if player_dead else curses.color_pair(GREY_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Last Action: ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"{action}  ", curses.color_pair(GREY_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Last Reward: ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"{reward:.1f}  ",
+def draw_statistics(action, episode, new_q, old_q, player_dead, reward, speed, screen, step, grid_size_y):
+    line_number = grid_size_y
+    line_number += 1
+    screen.addstr(line_number, 0, "")
+    line_number += 1
+    screen.addstr(line_number, 0, "Speed: ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"{speed:.0f}x", curses.color_pair(WHITE_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, "")
+    line_number += 1
+    screen.addstr(line_number, 0, "Current Step: ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"#{step:03} ", curses.color_pair(GREY_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, "Current Episode: ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"#{episode:05} ",
+                  curses.color_pair(GREY_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, "Last Action: ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"{action}  ", curses.color_pair(GREY_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, "Last Reward: ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"{reward:.1f}  ",
                   curses.color_pair(RED_ON_BLACK) if player_dead else curses.color_pair(GREY_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "")
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Old Q: ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"{old_q:.5f}  ", curses.color_pair(GREY_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "New Q: ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"{new_q:.5f}", curses.color_pair(GREY_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "")
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Total steps: ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"{step_counter:.0f}  ", curses.color_pair(GREY_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Total " + f"{bloc}: ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"{wall_counter:.0f}  ", curses.color_pair(GREY_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Total " + f"{tres}: ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"{tres_counter:.0f}  ", curses.color_pair(GREY_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Total " + f"{goal}: ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"{goal_counter:.0f}  ", curses.color_pair(GREY_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "")
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Epsilon (Explorationsrate): ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"{EPSILON:.2f}  ", curses.color_pair(GREY_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Alpha (Lernrate): ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"{ALPHA:.2f}  ", curses.color_pair(GREY_ON_BLACK))
-    lineNumber += 1
-    stdscr.addstr(lineNumber, 0, "Gamma (Langfristigkeit): ", curses.color_pair(WHITE_ON_BLACK))
-    stdscr.addstr(f"{GAMMA:.2f}  ", curses.color_pair(GREY_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, "")
+    line_number += 1
+    screen.addstr(line_number, 0, "Old Q: ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"{old_q:.5f}  ", curses.color_pair(GREY_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, "New Q: ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"{new_q:.5f}", curses.color_pair(GREY_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, "")
+    line_number += 1
+    screen.addstr(line_number, 0, "Total steps: ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"{step_counter:.0f}  ", curses.color_pair(GREY_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, f"Total {BLOCK}: ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"{wall_counter:.0f}  ", curses.color_pair(GREY_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, f"Total {TRESR}: ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"{tres_counter:.0f}  ", curses.color_pair(GREY_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, f"Total {GOALL}: ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"{goal_counter:.0f}  ", curses.color_pair(GREY_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, "")
+    line_number += 1
+    screen.addstr(line_number, 0, "Epsilon (Explorationsrate): ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"{EPSILON:.2f}  ", curses.color_pair(GREY_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, "Alpha (Lernrate): ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"{ALPHA:.2f}  ", curses.color_pair(GREY_ON_BLACK))
+    line_number += 1
+    screen.addstr(line_number, 0, "Gamma (Langfristigkeit): ", curses.color_pair(WHITE_ON_BLACK))
+    screen.addstr(f"{GAMMA:.2f}  ", curses.color_pair(GREY_ON_BLACK))
 
 
-def get_heatmap_max():
+def get_heatmap_max(heatmap):
     return max(max(row) for row in heatmap)
 
 
-def get_bg_color_ratio(current_position):
+def get_bg_color_ratio(current_position, heatmap):
     x, y = current_position
     current_value = heatmap[y][x]
-    max_value = get_heatmap_max()
+    max_value = get_heatmap_max(heatmap)
     return current_value / max_value
 
 
-def get_color_heatmap(current_position):
-    ratio = get_bg_color_ratio(current_position)
+def get_color_heatmap(current_position, heatmap):
+    ratio = get_bg_color_ratio(current_position, heatmap)
     if 0 <= ratio <= 0.05:
         return curses.color_pair(10)
     elif 0.05 <= ratio <= 0.1:
@@ -172,12 +170,13 @@ def get_color_heatmap(current_position):
         return curses.color_pair(14)
 
 
-def clear_screen(stdscr):
-    stdscr.clear()
+def clear_screen(screen):
+    screen.clear()
 
-def update_heatmap(e, new_player_pos):
+def update_heatmap(e, new_player_pos, heatmap):
     new_x, new_y = new_player_pos
     heatmap[new_y][new_x] += 0.00001 * (e ** 3)
+    return heatmap
 
 def init_colors(curses):
     curses.start_color()
@@ -213,26 +212,26 @@ def init_colors(curses):
 
     curses.init_pair(LIGHT_GREY_ON_BLACK, COLOR_LIGHT_GREY, curses.COLOR_BLACK)
 
-def init_draw(GRID_SIZE_X, GRID_SIZE_Y):
-    init_heatmap(GRID_SIZE_X, GRID_SIZE_Y)
-    stdscr = curses.initscr()
+def init_draw():
+    screen = curses.initscr()
     init_colors(curses)
+    curses.curs_set(0)
 
     # curses.curs_set(0)
-    stdscr.clear()
+    screen.clear()
 
     curses.noecho()
     curses.cbreak()
-    stdscr.keypad(True)
-    stdscr.nodelay(True)
-    return stdscr
+    screen.keypad(True)
+    screen.nodelay(True)
+    return screen
 
-def finish_draw(stdscr, GRID_SIZE_X, GRID_SIZE_Y):
-    stdscr.addstr(GRID_SIZE_Y + 2, 0, "Drücke eine Taste zum Beenden...")
-    stdscr.refresh()
-    stdscr.nodelay(False)
-    stdscr.getch()
+def finish_draw(screen, grid_size_y):
+    screen.addstr(grid_size_y + 2, 0, "Drücke eine Taste zum Beenden...")
+    screen.refresh()
+    screen.nodelay(False)
+    screen.getch()
     curses.nocbreak()
-    stdscr.keypad(False)
+    screen.keypad(False)
     curses.echo()
     curses.endwin()

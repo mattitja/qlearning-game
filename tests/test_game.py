@@ -1,4 +1,4 @@
-from src.game import move, GRID_SIZE, ALL_ACTIONS
+from src.game import move_player, GRID_SIZE, ALL_ACTIONS
 from src.game import calculate_reward
 from src.game import get_allowed_actions
 from src.game import get_best_action
@@ -9,22 +9,22 @@ M = 0 #min
 G = GRID_SIZE-1 #grid_six max
 
 def test_move():
-    assert move((M, M), '↓') == (M, M+1)
-    assert move((M, M), '↑') == (M, M)
-    assert move((M, M), '←') == (M, M)
-    assert move((M, M), '→') == (M+1, M)
-    assert move((G, G), '↓') == (G, G)
-    assert move((G, G), '↑') == (G, G-1)
-    assert move((G, G), '←') == (G-1, G)
-    assert move((G, G), '→') == (G, G)
-    assert move((M, G), '↓') == (M, G)
-    assert move((M, G), '↑') == (M, G-1)
-    assert move((M, G), '←') == (M, G)
-    assert move((M, G), '→') == (M+1, G)
-    assert move((G, M), '↓') == (G, M+1)
-    assert move((G, M), '↑') == (G, M)
-    assert move((G, M), '←') == (G-1, M)
-    assert move((G, M), '→') == (G, M)
+    assert move_player((M, M), '↓') == (M, M + 1)
+    assert move_player((M, M), '↑') == (M, M)
+    assert move_player((M, M), '←') == (M, M)
+    assert move_player((M, M), '→') == (M + 1, M)
+    assert move_player((G, G), '↓') == (G, G)
+    assert move_player((G, G), '↑') == (G, G - 1)
+    assert move_player((G, G), '←') == (G - 1, G)
+    assert move_player((G, G), '→') == (G, G)
+    assert move_player((M, G), '↓') == (M, G)
+    assert move_player((M, G), '↑') == (M, G - 1)
+    assert move_player((M, G), '←') == (M, G)
+    assert move_player((M, G), '→') == (M + 1, G)
+    assert move_player((G, M), '↓') == (G, M + 1)
+    assert move_player((G, M), '↑') == (G, M)
+    assert move_player((G, M), '←') == (G - 1, M)
+    assert move_player((G, M), '→') == (G, M)
 
 def test_get_reward():
     assert calculate_reward((M, M)) == -1.0
